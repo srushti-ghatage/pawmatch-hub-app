@@ -1,13 +1,114 @@
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background-color: #d9c9ac !important; /* #D9C6A6 */
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
+}
+
+/* .App {
+  text-align: center;
+} */
+
+.primary-btn {
+  background-color: #342511 !important;
+  font-size: medium !important;
+  color: #fff !important;
+  padding: 10px 30px !important;
+  font-weight: 700 !important;
+}
+
+.secondary-btn {
+  background-color: #fff !important;
+  font-size: 16px !important;
+  color: #342511 !important;
+  padding: 5px 30px !important;
+  font-weight: 400 !important;
+}
+
+.primary-font {
+  color: #342511 !important;
+  font-size: medium !important;
+}
+
+#header {
+  padding: 10px !important;
+  background-color: #342511;
+  box-shadow: 0px 4px 6px -2px rgba(0, 0, 0, 0.2);
+  min-height: 100px;
+  h2 {
+    color: #d9c9ac;
+    margin-left: 20px;
+  }
+
+  a {
+    color: #d9c9ac !important;
+    font-weight: 600;
+    text-decoration: none;
+    position: absolute !important;
+    right: 25px !important;
+  }
+}
+
+#main-page {
+  /* padding: 20px; */
+
+  .custom-card {
+    width: 100% !important;
+  }
+
+  .custom-card-img {
+    height: 300px !important;
+    object-fit: cover !important;
+  }
+}
+
+.text-right {
+  text-align: right !important;
+}
+
+.mark-favorite-checkbox {
+  cursor: pointer;
+  margin-top: 20px !important;
+}
+
+#favorite-checkbox {
+  margin-right: 8px !important;
+}
+
+.card-row-text {
+  font-weight: 600;
+}
+
+.card-title-text {
+  font-weight: 700 !important;
+}
+
+#pagination-container {
+  a {
+    color: #342511;
+    border: none !important;
+    font-weight: 700 !important;
+  }
+}
+
+.custom-dropdown-menu {
+  height: 110px !important;
+  overflow-y: auto !important;
+}
+
+.sort-by-dropdown {
+  margin-right: 15px !important;
+}
+
+.apply-filter-button {
+  float: right !important;
+  margin-top: 15px !important;
 }
