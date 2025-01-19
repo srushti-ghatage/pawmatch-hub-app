@@ -1,13 +1,34 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from "react";
-import axios from "axios";
 import DogCard from "../components/DogCard";
 import { Dog, DogFilter, Pagination } from "../@types/types";
 import Header from "../components/Header";
+import {
+  Container,
+  Row,
+  Col,
+  Button,
+  Dropdown,
+  Form,
+} from "react-bootstrap";
+import BasicPagination from "../components/BasicPagination";
+import {
+  fetchBreedsAsync,
+  fetchDogsAsync,
+  generateMatchAsync,
+} from "../services/dogService";
+import { SORT_BY_OPTIONS } from "../constants/DropdownConstants";
+import { logout } from "../services/auth";
+import { useNavigate } from "react-router-dom";
 
 const MainPage = () => {
+  const navigate = useNavigate();
   const [dogs, setDogs] = useState<Array<Dog>>([]);
   const [breeds, setBreeds] = useState<Array<string>>([]);
+  const [zipCodes, setZipCodes] = useState<Array<string>>([]);
   const [favorites, setFavorites] = useState<Array<string>>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [error, setError] = useState<any>({ show: false, message: "" });
   const [pagination, setPagination] = useState<Pagination>({
     prev: "",
     next: "",
@@ -15,65 +36,72 @@ const MainPage = () => {
   const [filters, setFilters] = useState<DogFilter>({
     breeds: [],
     sort: "breed:asc",
-    size: 20,
+    zipCodes: [],
+    ageMax: null,
+    ageMin: null,
+    size: 16,
   });
+  const [showFilters, setShowFilters] = useState<boolean>(false);
 
-  // Fetch dogs based on filters and sort
-  const fetchDogIds = async (page = "") => {
-    try {
-      const apiEndpointWithParams = page ? page : "/dogs/search";
-      const response = await axios.get(
-        `https://frontend-take-home-service.fetch.com${apiEndpointWithParams}`,
-        {
-          withCredentials: true,
-        }
-      );
-      fetchDogs(response.data.resultIds);
-      setPagination({ next: response.data.next, prev: response.data.prev });
-    } catch (error) {
-      console.error("Error fetching dogs:", error);
-    }
-  };
+  useEffect(() => {
+    fetchDogs();
+    fetchBreeds();
+  }, []);
 
-  const fetchDogs = async (dogIds: Array<string>) => {
-    try {
-      const response = await axios.post(
-        "https://frontend-take-home-service.fetch.com/dogs",
-        dogIds,
-        {
-          withCredentials: true,
-        }
-      );
-      setDogs(response.data);
-    } catch (error) {
-      console.error("Error fetching dog details:", error);
+  useEffect(() => {
+    const availableZipCodes = dogs.map((dog) => dog.zip_code);
+    setZipCodes(availableZipCodes);
+  }, [dogs]);
+
+  const fetchDogs = async (page?: string) => {
+    const dogResponse = await fetchDogsAsync(page);
+    if (dogResponse.status === "OK") {
+      setDogs(dogResponse.dogs);
+      setPagination({
+        next: dogResponse.next,
+        prev: dogResponse.prev,
+      });
+    } else {
+      setError({ show: true, message: dogResponse.message });
     }
+    setIsLoading(false);
   };
 
   // Fetch available dog breeds
   const fetchBreeds = async () => {
-    try {
-      const response = await axios.get(
-        "https://frontend-take-home-service.fetch.com/dogs/breeds",
-        {
-          withCredentials: true,
-        }
-      );
-      setBreeds(response.data);
-      // return response.data;
-    } catch (error) {
-      console.error("Error fetching breeds:", error);
+    const breedsResponse = await fetchBreedsAsync();
+    if (breedsResponse.status === "OK") {
+      setBreeds(breedsResponse.breeds);
+    } else {
+      setError({ show: true, message: breedsResponse.message });
     }
   };
 
-  // Handle filter changes like breed or sort
-  const handleFilterChange = (e: { target: { value: string } }) => {
-    setFilters((prevFilters) => ({ ...prevFilters, breed: e.target.value }));
+  const handleZipCodeFilterChange = (zipCode: string) => {
+    const selectedZipCodes = [...filters.zipCodes];
+    const zipCodeIndex = selectedZipCodes.findIndex((code) => code === zipCode);
+    if (zipCodeIndex < 0) {
+      selectedZipCodes.push(zipCode);
+    } else {
+      selectedZipCodes.splice(zipCodeIndex, 1);
+    }
+    setFilters({ ...filters, zipCodes: selectedZipCodes });
   };
 
-  const handleSortChange = (e: { target: { value: string } }) => {
-    setFilters((prevFilters) => ({ ...prevFilters, sort: e.target.value }));
+  const handleBreedsFilterChange = (breed: string) => {
+    const selectedBreeds = [...filters.breeds];
+    const breedIndex = selectedBreeds.findIndex((code) => code === breed);
+    if (breedIndex < 0) {
+      selectedBreeds.push(breed);
+    } else {
+      selectedBreeds.splice(breedIndex, 1);
+    }
+    setFilters({ ...filters, breeds: selectedBreeds });
   };
+
+  useEffect(() => {
+    handleApplyFiltersClick();
+  }, [filters.sort]);
 
   const toggleFavorite = (dogId: string) => {
     if (favorites.includes(dogId)) {
@@ -88,93 +116,220 @@ const MainPage = () => {
       alert("Please select at least one favorite dog!");
       return;
     }
-    try {
-      const response = await axios.post(
-        "https://frontend-take-home-service.fetch.com/dogs/match",
-        favorites,
-        { withCredentials: true }
-      );
-      alert(`Your match is dog ID: ${response.data.match}`);
-    } catch (error) {
-      console.error("Error generating match:", error);
+    const matchResponse = await generateMatchAsync(favorites);
+    if (matchResponse.status === "OK") {
+      alert(matchResponse.match);
+    } else {
+      setError({ show: true, message: matchResponse.message });
     }
   };
 
-  useEffect(() => {
-    const paramsData: DogFilter = { ...filters };
-    // paramsData.breed = "French Bulldog";
-    // if (!paramsData.breed) {
-    //   delete paramsData.breed;
-    // }
-    // if (!paramsData.size) {
-    //   delete paramsData.size;
-    // }
-    // if (!paramsData.sort) {
-    //   delete paramsData.sort;
-    // }
-    const queryParams = ""; //new URLSearchParams(paramsData);
-    fetchDogIds(`/dogs/search?${queryParams.toString()}`);
-  }, [filters]);
+  const handleLogout = async () => {
+    const response = await logout();
+    if (response.status === "OK") {
+      navigate("/login");
+    } else {
+      setError({ show: true, message: response.message });
+    }
+  };
 
-  useEffect(() => {
-    fetchBreeds();
-  }, []);
+  const handleApplyFiltersClick = () => {
+    let params = "?";
+    Object.keys(filters).map((key) => {
+      if (key === "breeds" && filters.breeds?.length > 0) {
+        const breedsString = encodeURIComponent(filters.breeds.join(","));
+        params += `${key}=${breedsString}&`;
+      } else if (key === "zipCodes" && filters.breeds?.length > 0) {
+        const zipCodesString = encodeURIComponent(filters.zipCodes.join(","));
+        params += `${key}=${zipCodesString}&`;
+      } else if (key === "sort" && filters.sort) {
+        params += `${key}=${filters.sort}&`;
+      } else if (key === "ageMax" && filters.ageMax) {
+        params += `${key}=${filters.ageMax}&`;
+      } else if (key === "ageMin" && filters.ageMin) {
+        params += `${key}=${filters.ageMin}&`;
+      } else if (key === "size" && filters.size) {
+        params += `${key}=${filters.size}&`;
+      }
+    });
+    setShowFilters(false);
+    console.log(params);
+    const url = `/dogs/search${params}`;
+    fetchDogs(url);
+  };
+
+  console.log(filters);
 
   return (
-    <div id="main-page">
-      <Header />
-
-      {/* Breed Filter */}
-      <div>
-        <label>Filter by Breed: </label>
-        <select
-          id="filter-by-breed"
-          name="filter-by-breed"
-          // value={filters.breed}
-          onChange={handleFilterChange}
+    <Container fluid className="p-0">
+      <Header onLogout={() => handleLogout()} />
+      <div id="main-page" className="m-0 p-4">
+        <div
+          id="filter-section"
+          className="p-0 d-flex flex-column align-items-end pb-4"
         >
-          {breeds.map((breed) => (
-            <option value={breed}>{breed}</option>
-          ))}
-        </select>
-      </div>
+          <Container
+            fluid
+            className="d-flex justify-content-end align-items-end mb-3"
+          >
+            <Dropdown className="sort-by-dropdown">
+              <Dropdown.Toggle variant="success" id="dropdown-basic">
+                {`Sort by`}
+              </Dropdown.Toggle>
+              <Dropdown.Menu className="custom-dropdown-menu">
+                {SORT_BY_OPTIONS.map((option, index) => (
+                  <Dropdown.Item
+                    key={index}
+                    href="#"
+                    onClick={() =>
+                      setFilters({ ...filters, sort: option.value })
+                    }
+                    active={option.value === filters.sort}
+                  >
+                    {option.label}
+                  </Dropdown.Item>
+                ))}
+              </Dropdown.Menu>
+            </Dropdown>
+            <Button
+              className="secondary-btn"
+              type="submit"
+              onClick={(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
+                setShowFilters(!showFilters);
+              }}
+            >
+              <span>{`${showFilters ? "Hide" : "Show"} filters`}</span>
+            </Button>
+          </Container>
 
-      {/* Sorting */}
-      <div>
-        <label>Sort By: </label>
-        <select onChange={handleSortChange} value={filters.sort}>
-          <option value="breed:asc">Breed: Ascending</option>
-          <option value="breed:desc">Breed: Descending</option>
-          <option value="name:asc">Name: Ascending</option>
-          <option value="name:desc">Name: Descending</option>
-        </select>
-      </div>
+          {showFilters && (
+            <Container fluid className="m-0 p-0">
+              <Row>
+                <Col xxl={5} xl={5} lg={4} md={3} sm={1} xs={0} />
+                <Col>
+                  <Dropdown>
+                    <Dropdown.Toggle variant="success" id="dropdown-basic">
+                      Filter by Breeds
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu className="custom-dropdown-menu">
+                      {breeds.map((breed, index) => (
+                        <Dropdown.Item
+                          key={index}
+                          href="#"
+                          active={filters.breeds.includes(breed)}
+                          onClick={() => handleBreedsFilterChange(breed)}
+                        >
+                          {breed}
+                        </Dropdown.Item>
+                      ))}
+                    </Dropdown.Menu>
+                  </Dropdown>
+                </Col>
+                {zipCodes.length > 0 && (
+                  <Col>
+                    <Dropdown>
+                      <Dropdown.Toggle variant="success" id="dropdown-basic">
+                        Filter by Zip Codes
+                      </Dropdown.Toggle>
+                      <Dropdown.Menu className="custom-dropdown-menu">
+                        {zipCodes.map((zipCode, index) => (
+                          <Dropdown.Item
+                            key={index}
+                            href="#"
+                            active={filters.zipCodes.includes(zipCode)}
+                            onClick={() => handleZipCodeFilterChange(zipCode)}
+                          >
+                            {zipCode}
+                          </Dropdown.Item>
+                        ))}
+                      </Dropdown.Menu>
+                    </Dropdown>
+                  </Col>
+                )}
+                <Col>
+                  <Form.Control
+                    value={filters.ageMin || ""}
+                    type="number"
+                    placeholder="Minimum age"
+                    onChange={(e: React.ChangeEvent<any>) =>
+                      setFilters({ ...filters, ageMin: e.target.value })
+                    }
+                  />
+                </Col>
+                <Col>
+                  <Form.Control
+                    value={filters.ageMax || ""}
+                    type="number"
+                    placeholder="Maximum age"
+                    onChange={(e: React.ChangeEvent<any>) =>
+                      setFilters({ ...filters, ageMax: e.target.value })
+                    }
+                  />
+                </Col>
+              </Row>
+              <Button
+                className="apply-filter-button"
+                variant="primary"
+                onClick={() => {
+                  handleApplyFiltersClick();
+                }}
+              >
+                Apply filters
+              </Button>
+            </Container>
+          )}
+        </div>
+        <Container fluid className="m-0 p-0">
+          <Row>
+            {dogs.map((dog, idx) => (
+              <Col
+                key={idx}
+                className="mt-3"
+                xxl={3}
+                xl={3}
+                lg={3}
+                md={4}
+                sm={6}
+                xs={12}
+              >
+                <DogCard
+                  key={dog.id}
+                  dog={dog}
+                  toggleFavorite={toggleFavorite}
+                  isFavorite={favorites.includes(dog.id)}
+                />
+              </Col>
+            ))}
+          </Row>
+        </Container>
 
-      {/* Display dog list */}
-      <div>
-        {dogs.map((dog) => (
-          <DogCard
-            key={dog.id}
-            dog={dog}
-            toggleFavorite={toggleFavorite}
-            isFavorite={favorites.includes(dog.id)}
+        {/* Pagination */}
+        <Container
+          id="pagination-container"
+          fluid
+          className="m-0 p-0 d-flex justify-content-end"
+        >
+          <BasicPagination
+            hasNext={pagination.next}
+            hasPrev={pagination.prev}
+            onNextClick={() => fetchDogs(pagination.next)}
+            onPrevClick={() => fetchDogs(pagination.prev)}
           />
-        ))}
-      </div>
-
-      {/* Pagination */}
-      <div>
-        {pagination.prev && (
-          <button onClick={() => fetchDogIds(pagination.prev)}>Previous</button>
+        </Container>
+        {/* Generate Match Button */}
+        {dogs.length > 0 && (
+          <Container fluid className="text-center">
+            <Button
+              disabled={favorites.length === 0}
+              size="lg"
+              onClick={handleGenerateMatch}
+            >
+              Generate Match
+            </Button>
+          </Container>
         )}
-        {pagination.next && (
-          <button onClick={() => fetchDogIds(pagination.next)}>Next</button>
-        )}
       </div>
-
-      {/* Generate Match Button */}
-      <button onClick={handleGenerateMatch}>Generate Match</button>
-    </div>
+    </Container>
   );
 };
 

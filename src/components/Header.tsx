@@ -1,6 +1,9 @@
 import { Container, Image } from "react-bootstrap";
 
-const Header = () => {
+interface HeaderProps {
+  onLogout: Function;
+}
+const Header = ({ onLogout }: HeaderProps) => {
   return (
     <Container
       className="m-auto p-0 d-flex justify-content-center align-items-center"
@@ -14,7 +17,11 @@ const Header = () => {
         roundedCircle
       />
       <h2>PawMatch Hub</h2>
-      <a href="#" onClick={() => {}}>
+      <a
+        onClick={() => {
+          onLogout();
+        }}
+      >
         Log out
       </a>
     </Container>

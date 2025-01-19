@@ -18,13 +18,13 @@ export interface Pagination {
 }
 
 export interface DogFilter {
-  breeds?: Array<string>;
-  zipCodes?: Array<number>;
-  ageMin?: number;
-  ageMax?: number;
-  size?: number;
+  breeds: Array<string>;
+  zipCodes: Array<string>;
+  ageMin: number | null;
+  ageMax: number | null;
+  size: number;
   from?: any;
-  sort?: string;
+  sort: string;
 }
 
 export interface Location {

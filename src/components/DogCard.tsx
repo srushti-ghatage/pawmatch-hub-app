@@ -1,3 +1,4 @@
+import { Card, Col, Form, Row, Image } from "react-bootstrap";
 import { Dog } from "../@types/types";
 interface DogCardProps {
   dog: Dog;
@@ -8,22 +9,54 @@ const DogCard = ({ dog, toggleFavorite, isFavorite }: DogCardProps) => {
   if (!dog) return <div>Loading...</div>;
 
   return (
-    <div>
-      <img src={dog.img} alt={dog.name} width="100" height="100" />
-      <h3>{dog.name}</h3>
-      <p>Age: {dog.age}</p>
-      <p>Breed: {dog.breed}</p>
-      <p>Zip: {dog.zip_code}</p>
-
-      <label>
-        Favorite:
-        <input
-          type="checkbox"
-          checked={isFavorite}
-          onChange={() => toggleFavorite(dog.id)}
-        />
-      </label>
-    </div>
+    <Card
+      bg={"light"}
+      key={"light"}
+      text={"dark"}
+      style={{ width: "18rem" }}
+      className="mb-2 custom-card"
+    >
+      <Card.Img
+        variant="top"
+        src={dog.img}
+        width={"auto"}
+        height={300}
+        className="custom-card-img"
+      />
+      <Card.Body>
+        <Card.Title className="card-title-text">{dog.name} </Card.Title>
+        <Row className="card-row-text">
+          <Col>{`Age`}</Col>
+          <Col className="text-right">{dog.age}</Col>
+        </Row>
+        <Row className="card-row-text">
+          <Col>{`Breed`}</Col>
+          <Col className="text-right">{dog.breed}</Col>
+        </Row>
+        <Row className="card-row-text">
+          <Col>{`Zip Code`}</Col>
+          <Col className="text-right">{dog.zip_code}</Col>
+        </Row>
+        <div
+          id="mark-favorite-checkbox"
+          className="mark-favorite-checkbox d-flex"
+          onClick={() => toggleFavorite(dog.id)}
+        >
+          <Image
+            id="favorite-checkbox"
+            src={
+              isFavorite
+                ? require("../assets/checked-favorite.png")
+                : require("../assets/unchecked-favorite.png")
+            }
+            fluid
+            width={25}
+            height={25}
+          />
+          <label htmlFor="favorite-checkbox">Mark as Favorite</label>
+        </div>
+      </Card.Body>
+    </Card>
   );
 };
 

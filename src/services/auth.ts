@@ -26,3 +26,19 @@ export const login = async ({ name, email }: LoginCredentials) => {
   }
   return responseObject;
 };
+
+export const logout = async () => {
+  try {
+    const response = await axios.post(
+      "https://frontend-take-home-service.fetch.com/auth/logout",
+      { withCredentials: true }
+    );
+    return { status: "OK" };
+  } catch (error) {
+    console.error("Logout failed:", error);
+    return {
+      status: "NOK",
+      message: "Unable to log out. Please try again later.",
+    };
+  }
+};
