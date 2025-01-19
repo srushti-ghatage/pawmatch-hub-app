@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import DogCard from "../components/DogCard";
 import { Dog, DogFilter, Pagination } from "../@types/types";
+import Header from "../components/Header";
 
 const MainPage = () => {
   const [dogs, setDogs] = useState<Array<Dog>>([]);
@@ -121,7 +122,7 @@ const MainPage = () => {
 
   return (
     <div id="main-page">
-      <h1>Dog Search</h1>
+      <Header />
 
       {/* Breed Filter */}
       <div>
