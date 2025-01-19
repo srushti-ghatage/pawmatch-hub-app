@@ -5,7 +5,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: hsl(38 40% 75% / 1) !important; /* #D9C6A6 */
+  background-color: #d9c9ac !important; /* #D9C6A6 */
 }
 
 code {
@@ -13,6 +13,20 @@ code {
     monospace;
 }
 
-.App {
+/* .App {
   text-align: center;
+} */
+
+.primary-btn {
+  background-color: #342511 !important;
+  font-size: medium !important;
+  color: #fff !important;
+  padding: 10px 30px !important;
+  font-weight: 700 !important;
 }
+
+.primary-font {
+  color: #342511 !important;
+  font-size: medium !important;
+}
+
