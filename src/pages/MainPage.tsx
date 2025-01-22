@@ -1,16 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import DogCard from "../components/DogCard";
 import { Dog, DogFilter, Pagination } from "../@types/types";
 import Header from "../components/Header";
-import {
-  Container,
-  Row,
-  Col,
-  Button,
-  Dropdown,
-  Form,
-} from "react-bootstrap";
+import { Container, Row, Col, Button, Dropdown, Form } from "react-bootstrap";
 import BasicPagination from "../components/BasicPagination";
 import {
   fetchBreedsAsync,
@@ -42,6 +35,7 @@ const MainPage = () => {
     size: 16,
   });
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     fetchDogs();
@@ -61,6 +55,9 @@ const MainPage = () => {
         next: dogResponse.next,
         prev: dogResponse.prev,
       });
+      setTimeout(() => {
+        containerRef?.current?.scrollIntoView({ behavior: "smooth" });
+      }, 1000);
     } else {
       setError({ show: true, message: dogResponse.message });
     }
@@ -161,7 +158,7 @@ const MainPage = () => {
   console.log(filters);
 
   return (
-    <Container fluid className="p-0">
+    <Container fluid className="p-0" ref={containerRef}>
       <Header onLogout={() => handleLogout()} />
       <div id="main-page" className="m-0 p-4">
         <div
@@ -170,45 +167,78 @@ const MainPage = () => {
         >
           <Container
             fluid
-            className="d-flex justify-content-end align-items-end mb-3"
+            className="d-flex justify-content-end align-items-end mb-3 p-0"
           >
-            <Dropdown className="sort-by-dropdown">
-              <Dropdown.Toggle variant="success" id="dropdown-basic">
-                {`Sort by`}
-              </Dropdown.Toggle>
-              <Dropdown.Menu className="custom-dropdown-menu">
-                {SORT_BY_OPTIONS.map((option, index) => (
-                  <Dropdown.Item
-                    key={index}
-                    href="#"
-                    onClick={() =>
-                      setFilters({ ...filters, sort: option.value })
-                    }
-                    active={option.value === filters.sort}
-                  >
-                    {option.label}
-                  </Dropdown.Item>
-                ))}
-              </Dropdown.Menu>
-            </Dropdown>
-            <Button
-              className="secondary-btn"
-              type="submit"
-              onClick={(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-                setShowFilters(!showFilters);
-              }}
-            >
-              <span>{`${showFilters ? "Hide" : "Show"} filters`}</span>
-            </Button>
+            <Container className="d-flex justify-content-start align-items-start p-0">
+              <Row className="flex-grow-1">
+                <Col>
+                  {favorites.length > 0 && (
+                    <p className="favorite-selected-text">{`${favorites.length} favorites selected`}</p>
+                  )}
+                </Col>
+                <Col>
+                  {favorites.length > 0 && (
+                    <Button
+                      className="generate-match-button"
+                      disabled={favorites.length === 0}
+                      size="lg"
+                      onClick={handleGenerateMatch}
+                    >
+                      Generate Match
+                    </Button>
+                  )}
+                </Col>
+              </Row>
+            </Container>
+            <Container className="d-flex justify-content-end p-0">
+              <Dropdown className="sort-by-dropdown">
+                <Dropdown.Toggle
+                  variant="success"
+                  id="dropdown-basic"
+                  className="secondary-btn"
+                >
+                  {`Sort by`}
+                </Dropdown.Toggle>
+                <Dropdown.Menu className="custom-dropdown-menu">
+                  {SORT_BY_OPTIONS.map((option, index) => (
+                    <Dropdown.Item
+                      key={index}
+                      href="#"
+                      onClick={() =>
+                        setFilters({ ...filters, sort: option.value })
+                      }
+                      active={option.value === filters.sort}
+                    >
+                      {option.label}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown>
+              <Button
+                className="secondary-btn"
+                type="submit"
+                onClick={(
+                  e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+                ) => {
+                  setShowFilters(!showFilters);
+                }}
+              >
+                <span>{`${showFilters ? "Hide" : "Show"} filters`}</span>
+              </Button>
+            </Container>
           </Container>
 
           {showFilters && (
-            <Container fluid className="m-0 p-0">
+            <Container fluid className="m-0 mt-3 p-0">
               <Row>
                 <Col xxl={5} xl={5} lg={4} md={3} sm={1} xs={0} />
                 <Col>
                   <Dropdown>
-                    <Dropdown.Toggle variant="success" id="dropdown-basic">
+                    <Dropdown.Toggle
+                      variant="success"
+                      id="dropdown-basic"
+                      className="secondary-btn"
+                    >
                       Filter by Breeds
                     </Dropdown.Toggle>
                     <Dropdown.Menu className="custom-dropdown-menu">
@@ -228,7 +258,11 @@ const MainPage = () => {
                 {zipCodes.length > 0 && (
                   <Col>
                     <Dropdown>
-                      <Dropdown.Toggle variant="success" id="dropdown-basic">
+                      <Dropdown.Toggle
+                        variant="success"
+                        id="dropdown-basic"
+                        className="secondary-btn"
+                      >
                         Filter by Zip Codes
                       </Dropdown.Toggle>
                       <Dropdown.Menu className="custom-dropdown-menu">
@@ -269,7 +303,6 @@ const MainPage = () => {
               </Row>
               <Button
                 className="apply-filter-button"
-                variant="primary"
                 onClick={() => {
                   handleApplyFiltersClick();
                 }}
@@ -302,12 +335,10 @@ const MainPage = () => {
             ))}
           </Row>
         </Container>
-
-        {/* Pagination */}
         <Container
           id="pagination-container"
           fluid
-          className="m-0 p-0 d-flex justify-content-end"
+          className="m-0 mt-5 p-0 d-flex justify-content-center"
         >
           <BasicPagination
             hasNext={pagination.next}
@@ -316,18 +347,6 @@ const MainPage = () => {
             onPrevClick={() => fetchDogs(pagination.prev)}
           />
         </Container>
-        {/* Generate Match Button */}
-        {dogs.length > 0 && (
-          <Container fluid className="text-center">
-            <Button
-              disabled={favorites.length === 0}
-              size="lg"
-              onClick={handleGenerateMatch}
-            >
-              Generate Match
-            </Button>
-          </Container>
-        )}
       </div>
     </Container>
   );

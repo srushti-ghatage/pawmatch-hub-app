@@ -23,14 +23,16 @@ code {
   color: #fff !important;
   padding: 10px 30px !important;
   font-weight: 700 !important;
+  min-width: 140px !important;
 }
 
 .secondary-btn {
   background-color: #fff !important;
   font-size: 16px !important;
   color: #342511 !important;
-  padding: 5px 30px !important;
+  padding: 0px 30px !important;
   font-weight: 400 !important;
+  min-height: 40px !important;
 }
 
 .primary-font {
@@ -111,4 +113,34 @@ code {
 .apply-filter-button {
   float: right !important;
   margin-top: 15px !important;
+  background-color: #342511 !important;
+  font-size: medium !important;
+  color: #fff !important;
+  padding: 0px 30px !important;
+  font-weight: 600 !important;
+  height: 40px !important;
+}
+
+.favorite-selected-text {
+  font-size: x-large;
+  font-weight: 500;
+  margin: 0px !important;
+}
+
+.logout-link {
+  cursor: pointer;
+}
+
+.generate-match-button {
+  background-color: #342511 !important;
+  font-size: medium !important;
+  color: #fff !important;
+  padding: 0px 30px !important;
+  font-weight: 600 !important;
+  height: 40px !important;
+  padding-bottom: 5px !important;
+}
+
+button {
+  border: none !important;
 }

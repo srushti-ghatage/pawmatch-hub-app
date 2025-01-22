@@ -31,15 +31,14 @@ const LoginPage = () => {
     if (validateForm()) {
       const response = await login(loginCreds);
       setTimeout(() => {
-        setIsLoading(false);
         if (response.isSuccess) {
           navigate("/home");
         } else {
           setError({ show: true, message: response.error.message });
         }
+        setIsLoading(false);
       }, 1500);
     }
-    setIsLoading(false);
   };
 
   const validateForm = () => {
