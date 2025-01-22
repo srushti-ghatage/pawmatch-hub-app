@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import DogCard from "../components/DogCard";
 import { Dog, DogFilter, Pagination } from "../@types/types";
 import Header from "../components/Header";
@@ -10,6 +10,8 @@ import {
   Button,
   Dropdown,
   Form,
+  Modal,
+  CloseButton,
 } from "react-bootstrap";
 import BasicPagination from "../components/BasicPagination";
 import {
@@ -20,6 +22,7 @@ import {
 import { SORT_BY_OPTIONS } from "../constants/DropdownConstants";
 import { logout } from "../services/auth";
 import { useNavigate } from "react-router-dom";
+import { sortListBasedOnFilter } from "../utils/sortUtils";
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -42,6 +45,9 @@ const MainPage = () => {
     size: 16,
   });
   const [showFilters, setShowFilters] = useState<boolean>(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [showMatchFoundModal, setShowMatchFoundModal] = useState(false);
+  const [matchedDog, setMatchedDog] = useState<Dog | null>(null);
 
   useEffect(() => {
     fetchDogs();
@@ -61,6 +67,9 @@ const MainPage = () => {
         next: dogResponse.next,
         prev: dogResponse.prev,
       });
+      setTimeout(() => {
+        containerRef?.current?.scrollIntoView({ behavior: "smooth" });
+      }, 1000);
     } else {
       setError({ show: true, message: dogResponse.message });
     }
@@ -99,10 +108,6 @@ const MainPage = () => {
     setFilters({ ...filters, breeds: selectedBreeds });
   };
 
-  useEffect(() => {
-    handleApplyFiltersClick();
-  }, [filters.sort]);
-
   const toggleFavorite = (dogId: string) => {
     if (favorites.includes(dogId)) {
       setFavorites(favorites.filter((id) => id !== dogId));
@@ -118,18 +123,25 @@ const MainPage = () => {
     }
     const matchResponse = await generateMatchAsync(favorites);
     if (matchResponse.status === "OK") {
-      alert(matchResponse.match);
+      const match = dogs.filter((dog) => dog.id === matchResponse.match)[0];
+      setMatchedDog(match);
+      setShowMatchFoundModal(true);
+      // alert(matchResponse.match);
     } else {
       setError({ show: true, message: matchResponse.message });
     }
   };
 
   const handleLogout = async () => {
-    const response = await logout();
-    if (response.status === "OK") {
-      navigate("/login");
-    } else {
-      setError({ show: true, message: response.message });
+    // eslint-disable-next-line no-restricted-globals
+    const result = confirm("Are you sure you want to logout?");
+    if (result) {
+      const response = await logout();
+      if (response.status === "OK") {
+        navigate("/login");
+      } else {
+        setError({ show: true, message: response.message });
+      }
     }
   };
 
@@ -143,7 +155,7 @@ const MainPage = () => {
         const zipCodesString = encodeURIComponent(filters.zipCodes.join(","));
         params += `${key}=${zipCodesString}&`;
       } else if (key === "sort" && filters.sort) {
-        params += `${key}=${filters.sort}&`;
+        // params += `${key}=${filters.sort}&`;
       } else if (key === "ageMax" && filters.ageMax) {
         params += `${key}=${filters.ageMax}&`;
       } else if (key === "ageMin" && filters.ageMin) {
@@ -153,15 +165,56 @@ const MainPage = () => {
       }
     });
     setShowFilters(false);
-    console.log(params);
     const url = `/dogs/search${params}`;
     fetchDogs(url);
   };
 
-  console.log(filters);
+  useEffect(() => {
+    if (error.show) {
+      setTimeout(() => {
+        setError({ show: false, message: "" });
+        navigate("/login");
+      }, 3000);
+    }
+  }, [error]);
 
   return (
-    <Container fluid className="p-0">
+    <Container fluid className="p-0" ref={containerRef}>
+      <Modal
+        size="lg"
+        aria-labelledby="contained-modal-title-vcenter"
+        show={error.show}
+      >
+        <Modal.Body>
+          <CloseButton
+            className="float-end"
+            onClick={() => {
+              setError({ show: false, message: "" });
+              navigate("/login");
+            }}
+          />
+          <Container className="d-flex flex-column align-items-center container">
+            <p style={{ color: "red", fontSize: "large" }}>{error.message}</p>
+          </Container>
+        </Modal.Body>
+      </Modal>
+      <Modal
+        show={showMatchFoundModal}
+        onHide={() => setShowMatchFoundModal(false)}
+      >
+        <Modal.Body>
+          <CloseButton
+            className="float-end"
+            onClick={() => setShowMatchFoundModal(false)}
+          />
+          <Container className="d-flex flex-column align-items-center container">
+            <h3>We have found a match for you!</h3>
+            <div className="pt-4 pb-4">
+              <DogCard dog={matchedDog} hideFavoriteOption={true} />
+            </div>
+          </Container>
+        </Modal.Body>
+      </Modal>
       <Header onLogout={() => handleLogout()} />
       <div id="main-page" className="m-0 p-4">
         <div
@@ -170,45 +223,83 @@ const MainPage = () => {
         >
           <Container
             fluid
-            className="d-flex justify-content-end align-items-end mb-3"
+            className="d-flex justify-content-end align-items-end mb-3 p-0"
           >
-            <Dropdown className="sort-by-dropdown">
-              <Dropdown.Toggle variant="success" id="dropdown-basic">
-                {`Sort by`}
-              </Dropdown.Toggle>
-              <Dropdown.Menu className="custom-dropdown-menu">
-                {SORT_BY_OPTIONS.map((option, index) => (
-                  <Dropdown.Item
-                    key={index}
-                    href="#"
-                    onClick={() =>
-                      setFilters({ ...filters, sort: option.value })
-                    }
-                    active={option.value === filters.sort}
-                  >
-                    {option.label}
-                  </Dropdown.Item>
-                ))}
-              </Dropdown.Menu>
-            </Dropdown>
-            <Button
-              className="secondary-btn"
-              type="submit"
-              onClick={(e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
-                setShowFilters(!showFilters);
-              }}
-            >
-              <span>{`${showFilters ? "Hide" : "Show"} filters`}</span>
-            </Button>
+            <Container className="d-flex justify-content-start align-items-start p-0">
+              <Row className="flex-grow-1">
+                <Col>
+                  {favorites.length > 0 && (
+                    <p className="favorite-selected-text">{`${favorites.length} favorites selected`}</p>
+                  )}
+                </Col>
+                <Col>
+                  {favorites.length > 0 && (
+                    <Button
+                      className="generate-match-button"
+                      disabled={favorites.length === 0}
+                      size="lg"
+                      onClick={handleGenerateMatch}
+                    >
+                      Generate Match
+                    </Button>
+                  )}
+                </Col>
+              </Row>
+            </Container>
+            <Container className="d-flex justify-content-end p-0">
+              <Dropdown className="sort-by-dropdown">
+                <Dropdown.Toggle
+                  variant="success"
+                  id="dropdown-basic"
+                  className="secondary-btn"
+                >
+                  {`Sort by`}
+                </Dropdown.Toggle>
+                <Dropdown.Menu className="custom-dropdown-menu">
+                  {SORT_BY_OPTIONS.map((option, index) => (
+                    <Dropdown.Item
+                      key={index}
+                      href="#"
+                      onClick={() => {
+                        const sortedList = sortListBasedOnFilter(
+                          option.value,
+                          dogs
+                        );
+                        setDogs([...sortedList]);
+                        setFilters({ ...filters, sort: option.value });
+                      }}
+                      active={option.value === filters.sort}
+                    >
+                      {option.label}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown>
+              <Button
+                className="secondary-btn"
+                type="submit"
+                onClick={(
+                  e: React.MouseEvent<HTMLButtonElement, MouseEvent>
+                ) => {
+                  setShowFilters(!showFilters);
+                }}
+              >
+                <span>{`${showFilters ? "Hide" : "Show"} filters`}</span>
+              </Button>
+            </Container>
           </Container>
 
           {showFilters && (
-            <Container fluid className="m-0 p-0">
+            <Container fluid className="m-0 mt-3 p-0">
               <Row>
                 <Col xxl={5} xl={5} lg={4} md={3} sm={1} xs={0} />
                 <Col>
                   <Dropdown>
-                    <Dropdown.Toggle variant="success" id="dropdown-basic">
+                    <Dropdown.Toggle
+                      variant="success"
+                      id="dropdown-basic"
+                      className="secondary-btn"
+                    >
                       Filter by Breeds
                     </Dropdown.Toggle>
                     <Dropdown.Menu className="custom-dropdown-menu">
@@ -228,7 +319,11 @@ const MainPage = () => {
                 {zipCodes.length > 0 && (
                   <Col>
                     <Dropdown>
-                      <Dropdown.Toggle variant="success" id="dropdown-basic">
+                      <Dropdown.Toggle
+                        variant="success"
+                        id="dropdown-basic"
+                        className="secondary-btn"
+                      >
                         Filter by Zip Codes
                       </Dropdown.Toggle>
                       <Dropdown.Menu className="custom-dropdown-menu">
@@ -267,65 +362,68 @@ const MainPage = () => {
                   />
                 </Col>
               </Row>
-              <Button
-                className="apply-filter-button"
-                variant="primary"
-                onClick={() => {
-                  handleApplyFiltersClick();
-                }}
-              >
-                Apply filters
-              </Button>
+              <Col lg={3} className="float-end">
+                <Button
+                  className="apply-filter-button"
+                  onClick={() => {
+                    handleApplyFiltersClick();
+                  }}
+                >
+                  Apply filters
+                </Button>
+                <Button
+                  className="apply-filter-button"
+                  onClick={() => {
+                    handleApplyFiltersClick();
+                  }}
+                >
+                  Apply filters
+                </Button>
+              </Col>
             </Container>
           )}
         </div>
         <Container fluid className="m-0 p-0">
           <Row>
-            {dogs.map((dog, idx) => (
-              <Col
-                key={idx}
-                className="mt-3"
-                xxl={3}
-                xl={3}
-                lg={3}
-                md={4}
-                sm={6}
-                xs={12}
-              >
-                <DogCard
-                  key={dog.id}
-                  dog={dog}
-                  toggleFavorite={toggleFavorite}
-                  isFavorite={favorites.includes(dog.id)}
-                />
-              </Col>
-            ))}
+            {dogs.length === 0
+              ? !isLoading && (
+                  <Container fluid className="text-center">
+                    <h3>No results found!</h3>
+                  </Container>
+                )
+              : dogs.map((dog, idx) => (
+                  <Col
+                    key={idx}
+                    className="mt-3"
+                    xxl={3}
+                    xl={3}
+                    lg={3}
+                    md={4}
+                    sm={6}
+                    xs={12}
+                  >
+                    <DogCard
+                      key={dog.id}
+                      dog={dog}
+                      toggleFavorite={toggleFavorite}
+                      isFavorite={favorites.includes(dog.id)}
+                    />
+                  </Col>
+                ))}
           </Row>
         </Container>
-
-        {/* Pagination */}
-        <Container
-          id="pagination-container"
-          fluid
-          className="m-0 p-0 d-flex justify-content-end"
-        >
-          <BasicPagination
-            hasNext={pagination.next}
-            hasPrev={pagination.prev}
-            onNextClick={() => fetchDogs(pagination.next)}
-            onPrevClick={() => fetchDogs(pagination.prev)}
-          />
-        </Container>
-        {/* Generate Match Button */}
         {dogs.length > 0 && (
-          <Container fluid className="text-center">
-            <Button
-              disabled={favorites.length === 0}
-              size="lg"
-              onClick={handleGenerateMatch}
-            >
-              Generate Match
-            </Button>
+          <Container
+            id="pagination-container"
+            fluid
+            className="m-0 mt-5 p-0 d-flex justify-content-center"
+          >
+            <BasicPagination
+              hasNext={pagination.next}
+              hasPrev={pagination.prev}
+              onNextClick={() => fetchDogs(pagination.next)}
+              onPrevClick={() => fetchDogs(pagination.prev)}
+            />
           </Container>
         )}
       </div>

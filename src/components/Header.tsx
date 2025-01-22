@@ -18,6 +18,7 @@ const Header = ({ onLogout }: HeaderProps) => {
       />
       <h2>PawMatch Hub</h2>
       <a
+        className="logout-link"
         onClick={() => {
           onLogout();
         }}

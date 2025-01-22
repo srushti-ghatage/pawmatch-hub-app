@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const fetchDogsAsync = async (page?: string) => {
   try {
-    const apiEndpointWithParams = page ? page : "/dogs/search";
+    const apiEndpointWithParams = page ? page : "/dogs/search?sort=breed:asc";
     const response = await axios.get(
       `https://frontend-take-home-service.fetch.com${apiEndpointWithParams}`,
       {
@@ -18,7 +18,7 @@ export const fetchDogsAsync = async (page?: string) => {
     };
   } catch (error) {
     console.error("Error fetching dogs:", error);
-    return { status: "NOK", message: "", payload: JSON.stringify(error) };
+    return { status: "NOK", message: "Session timeout. Navigating to login page.", payload: JSON.stringify(error) };
   }
 };
 
@@ -49,7 +49,7 @@ export const fetchBreedsAsync = async () => {
     return { breeds: response.data, status: "OK" };
   } catch (error) {
     console.error("Error fetching breeds:", error);
-    return { status: "NOK", message: "", payload: JSON.stringify(error) };
+    return { status: "NOK", message: "Session timeout. Navigating to login page.", payload: JSON.stringify(error) };
   }
 };
 
@@ -63,6 +63,6 @@ export const generateMatchAsync = async (favoriteList: Array<string>) => {
     return { status: "OK", match: response.data.match };
   } catch (error) {
     console.error("Error generating match:", error);
-    return { status: "NOK", message: "", payload: JSON.stringify(error) };
+    return { status: "NOK", message: "Session timeout. Navigating to login page.", payload: JSON.stringify(error) };
   }
 };
