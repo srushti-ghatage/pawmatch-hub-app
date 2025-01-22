@@ -3,7 +3,16 @@ import React, { useState, useEffect, useRef } from "react";
 import DogCard from "../components/DogCard";
 import { Dog, DogFilter, Pagination } from "../@types/types";
 import Header from "../components/Header";
-import { Container, Row, Col, Button, Dropdown, Form } from "react-bootstrap";
+import {
+  Container,
+  Row,
+  Col,
+  Button,
+  Dropdown,
+  Form,
+  Modal,
+  CloseButton,
+} from "react-bootstrap";
 import BasicPagination from "../components/BasicPagination";
 import {
   fetchBreedsAsync,
@@ -36,6 +45,8 @@ const MainPage = () => {
   });
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const [showMatchFoundModal, setShowMatchFoundModal] = useState(false);
+  const [matchedDog, setMatchedDog] = useState<Dog | null>(null);
 
   useEffect(() => {
     fetchDogs();
@@ -115,7 +126,10 @@ const MainPage = () => {
     }
     const matchResponse = await generateMatchAsync(favorites);
     if (matchResponse.status === "OK") {
-      alert(matchResponse.match);
+      const match = dogs.filter((dog) => dog.id === matchResponse.match)[0];
+      setMatchedDog(match);
+      setShowMatchFoundModal(true);
+      // alert(matchResponse.match);
     } else {
       setError({ show: true, message: matchResponse.message });
     }
@@ -159,6 +173,23 @@ const MainPage = () => {
 
   return (
     <Container fluid className="p-0" ref={containerRef}>
+      <Modal
+        show={showMatchFoundModal}
+        onHide={() => setShowMatchFoundModal(false)}
+      >
+        <Modal.Body>
+          <CloseButton
+            className="float-end"
+            onClick={() => setShowMatchFoundModal(false)}
+          />
+          <Container className="d-flex flex-column align-items-center container">
+            <h3>We have found a match for you!</h3>
+            <div className="pt-4 pb-4">
+              <DogCard dog={matchedDog} hideFavoriteOption={true} />
+            </div>
+          </Container>
+        </Modal.Body>
+      </Modal>
       <Header onLogout={() => handleLogout()} />
       <div id="main-page" className="m-0 p-4">
         <div

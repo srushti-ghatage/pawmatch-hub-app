@@ -1,11 +1,17 @@
-import { Card, Col, Form, Row, Image } from "react-bootstrap";
+import { Card, Col, Row, Image } from "react-bootstrap";
 import { Dog } from "../@types/types";
 interface DogCardProps {
-  dog: Dog;
-  toggleFavorite: Function;
-  isFavorite: boolean;
+  dog: Dog | null;
+  toggleFavorite?: Function;
+  isFavorite?: boolean;
+  hideFavoriteOption?: boolean;
 }
-const DogCard = ({ dog, toggleFavorite, isFavorite }: DogCardProps) => {
+const DogCard = ({
+  dog,
+  toggleFavorite,
+  isFavorite,
+  hideFavoriteOption = false,
+}: DogCardProps) => {
   if (!dog) return <div>Loading...</div>;
 
   return (
@@ -37,24 +43,26 @@ const DogCard = ({ dog, toggleFavorite, isFavorite }: DogCardProps) => {
           <Col>{`Zip Code`}</Col>
           <Col className="text-right">{dog.zip_code}</Col>
         </Row>
-        <div
-          id="mark-favorite-checkbox"
-          className="mark-favorite-checkbox d-flex"
-          onClick={() => toggleFavorite(dog.id)}
-        >
-          <Image
-            id="favorite-checkbox"
-            src={
-              isFavorite
-                ? require("../assets/checked-favorite.png")
-                : require("../assets/unchecked-favorite.png")
-            }
-            fluid
-            width={25}
-            height={25}
-          />
-          <label htmlFor="favorite-checkbox">Mark as Favorite</label>
-        </div>
+        {!hideFavoriteOption && (
+          <div
+            id="mark-favorite-checkbox"
+            className="mark-favorite-checkbox d-flex"
+            onClick={() => toggleFavorite && toggleFavorite(dog.id)}
+          >
+            <Image
+              id="favorite-checkbox"
+              src={
+                isFavorite
+                  ? require("../assets/checked-favorite.png")
+                  : require("../assets/unchecked-favorite.png")
+              }
+              fluid
+              width={25}
+              height={25}
+            />
+            <label htmlFor="favorite-checkbox">Mark as Favorite</label>
+          </div>
+        )}
       </Card.Body>
     </Card>
   );
