@@ -108,13 +108,6 @@ const MainPage = () => {
     setFilters({ ...filters, breeds: selectedBreeds });
   };
 
-  useEffect(() => {
-    if (dogs.length > 0) {
-      const sortedList = sortListBasedOnFilter(filters.sort, dogs);
-      setDogs([...sortedList]);
-    }
-  }, [dogs, filters]);
-
   const toggleFavorite = (dogId: string) => {
     if (favorites.includes(dogId)) {
       setFavorites(favorites.filter((id) => id !== dogId));
@@ -140,11 +133,15 @@ const MainPage = () => {
   };
 
   const handleLogout = async () => {
-    const response = await logout();
-    if (response.status === "OK") {
-      navigate("/login");
-    } else {
-      setError({ show: true, message: response.message });
+    // eslint-disable-next-line no-restricted-globals
+    const result = confirm("Are you sure you want to logout?");
+    if (result) {
+      const response = await logout();
+      if (response.status === "OK") {
+        navigate("/login");
+      } else {
+        setError({ show: true, message: response.message });
+      }
     }
   };
 
@@ -168,15 +165,39 @@ const MainPage = () => {
       }
     });
     setShowFilters(false);
-    console.log(params);
     const url = `/dogs/search${params}`;
     fetchDogs(url);
   };
 
-  console.log(filters);
+  useEffect(() => {
+    if (error.show) {
+      setTimeout(() => {
+        setError({ show: false, message: "" });
+        navigate("/login");
+      }, 3000);
+    }
+  }, [error]);
 
   return (
     <Container fluid className="p-0" ref={containerRef}>
+      <Modal
+        size="lg"
+        aria-labelledby="contained-modal-title-vcenter"
+        show={error.show}
+      >
+        <Modal.Body>
+          <CloseButton
+            className="float-end"
+            onClick={() => {
+              setError({ show: false, message: "" });
+              navigate("/login");
+            }}
+          />
+          <Container className="d-flex flex-column align-items-center container">
+            <p style={{ color: "red", fontSize: "large" }}>{error.message}</p>
+          </Container>
+        </Modal.Body>
+      </Modal>
       <Modal
         show={showMatchFoundModal}
         onHide={() => setShowMatchFoundModal(false)}
@@ -239,9 +260,14 @@ const MainPage = () => {
                     <Dropdown.Item
                       key={index}
                       href="#"
-                      onClick={() =>
-                        setFilters({ ...filters, sort: option.value })
-                      }
+                      onClick={() => {
+                        const sortedList = sortListBasedOnFilter(
+                          option.value,
+                          dogs
+                        );
+                        setDogs([...sortedList]);
+                        setFilters({ ...filters, sort: option.value });
+                      }}
                       active={option.value === filters.sort}
                     >
                       {option.label}
@@ -336,52 +362,70 @@ const MainPage = () => {
                   />
                 </Col>
               </Row>
-              <Button
-                className="apply-filter-button"
-                onClick={() => {
-                  handleApplyFiltersClick();
-                }}
-              >
-                Apply filters
-              </Button>
+              <Col lg={3} className="float-end">
+                <Button
+                  className="apply-filter-button"
+                  onClick={() => {
+                    handleApplyFiltersClick();
+                  }}
+                >
+                  Apply filters
+                </Button>
+                <Button
+                  className="apply-filter-button"
+                  onClick={() => {
+                    handleApplyFiltersClick();
+                  }}
+                >
+                  Apply filters
+                </Button>
+              </Col>
             </Container>
           )}
         </div>
         <Container fluid className="m-0 p-0">
           <Row>
-            {dogs.map((dog, idx) => (
-              <Col
-                key={idx}
-                className="mt-3"
-                xxl={3}
-                xl={3}
-                lg={3}
-                md={4}
-                sm={6}
-                xs={12}
-              >
-                <DogCard
-                  key={dog.id}
-                  dog={dog}
-                  toggleFavorite={toggleFavorite}
-                  isFavorite={favorites.includes(dog.id)}
-                />
-              </Col>
-            ))}
+            {dogs.length === 0
+              ? !isLoading && (
+                  <Container fluid className="text-center">
+                    <h3>No results found!</h3>
+                  </Container>
+                )
+              : dogs.map((dog, idx) => (
+                  <Col
+                    key={idx}
+                    className="mt-3"
+                    xxl={3}
+                    xl={3}
+                    lg={3}
+                    md={4}
+                    sm={6}
+                    xs={12}
+                  >
+                    <DogCard
+                      key={dog.id}
+                      dog={dog}
+                      toggleFavorite={toggleFavorite}
+                      isFavorite={favorites.includes(dog.id)}
+                    />
+                  </Col>
+                ))}
           </Row>
         </Container>
-        <Container
-          id="pagination-container"
-          fluid
-          className="m-0 mt-5 p-0 d-flex justify-content-center"
-        >
-          <BasicPagination
-            hasNext={pagination.next}
-            hasPrev={pagination.prev}
-            onNextClick={() => fetchDogs(pagination.next)}
-            onPrevClick={() => fetchDogs(pagination.prev)}
-          />
-        </Container>
+        {dogs.length > 0 && (
+          <Container
+            id="pagination-container"
+            fluid
+            className="m-0 mt-5 p-0 d-flex justify-content-center"
+          >
+            <BasicPagination
+              hasNext={pagination.next}
+              hasPrev={pagination.prev}
+              onNextClick={() => fetchDogs(pagination.next)}
+              onPrevClick={() => fetchDogs(pagination.prev)}
+            />
+          </Container>
+        )}
       </div>
     </Container>
   );

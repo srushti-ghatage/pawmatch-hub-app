@@ -64,8 +64,6 @@ const LoginPage = () => {
     return isValid;
   };
 
-  console.log(formErrors);
-
   return (
     <Container
       fluid
