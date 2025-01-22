@@ -22,6 +22,7 @@ import {
 import { SORT_BY_OPTIONS } from "../constants/DropdownConstants";
 import { logout } from "../services/auth";
 import { useNavigate } from "react-router-dom";
+import { sortListBasedOnFilter } from "../utils/sortUtils";
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -108,8 +109,11 @@ const MainPage = () => {
   };
 
   useEffect(() => {
-    handleApplyFiltersClick();
-  }, [filters.sort]);
+    if (dogs.length > 0) {
+      const sortedList = sortListBasedOnFilter(filters.sort, dogs);
+      setDogs([...sortedList]);
+    }
+  }, [dogs, filters]);
 
   const toggleFavorite = (dogId: string) => {
     if (favorites.includes(dogId)) {
@@ -154,7 +158,7 @@ const MainPage = () => {
         const zipCodesString = encodeURIComponent(filters.zipCodes.join(","));
         params += `${key}=${zipCodesString}&`;
       } else if (key === "sort" && filters.sort) {
-        params += `${key}=${filters.sort}&`;
+        // params += `${key}=${filters.sort}&`;
       } else if (key === "ageMax" && filters.ageMax) {
         params += `${key}=${filters.ageMax}&`;
       } else if (key === "ageMin" && filters.ageMin) {

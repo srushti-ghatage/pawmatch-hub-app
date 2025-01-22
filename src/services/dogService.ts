@@ -2,7 +2,7 @@ import axios from "axios";
 
 export const fetchDogsAsync = async (page?: string) => {
   try {
-    const apiEndpointWithParams = page ? page : "/dogs/search";
+    const apiEndpointWithParams = page ? page : "/dogs/search?sort=breed:asc";
     const response = await axios.get(
       `https://frontend-take-home-service.fetch.com${apiEndpointWithParams}`,
       {
