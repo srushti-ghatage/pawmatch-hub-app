@@ -19,35 +19,38 @@ import {
   fetchDogsAsync,
   generateMatchAsync,
 } from "../services/dogService";
-import { SORT_BY_OPTIONS } from "../constants/DropdownConstants";
+import {
+  DEFAULT_FILTERS,
+  SORT_BY_OPTIONS,
+} from "../constants/DropdownConstants";
 import { logout } from "../services/auth";
 import { useNavigate } from "react-router-dom";
-import { sortListBasedOnFilter } from "../utils/sortUtils";
+import { mergeListItemsById, sortListBasedOnFilter } from "../utils/listUtils";
+import PageLoader from "src/components/PageLoader";
 
 const MainPage = () => {
   const navigate = useNavigate();
   const [dogs, setDogs] = useState<Array<Dog>>([]);
+  const allDogs = useRef<Array<Dog>>([]);
   const [breeds, setBreeds] = useState<Array<string>>([]);
   const [zipCodes, setZipCodes] = useState<Array<string>>([]);
   const [favorites, setFavorites] = useState<Array<string>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<any>({ show: false, message: "" });
+  const [error, setError] = useState<any>({
+    show: false,
+    message: "",
+    toRedirect: false,
+  });
   const [pagination, setPagination] = useState<Pagination>({
     prev: "",
     next: "",
   });
-  const [filters, setFilters] = useState<DogFilter>({
-    breeds: [],
-    sort: "breed:asc",
-    zipCodes: [],
-    ageMax: null,
-    ageMin: null,
-    size: 16,
-  });
+  const [filters, setFilters] = useState<DogFilter>(DEFAULT_FILTERS);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [showMatchFoundModal, setShowMatchFoundModal] = useState(false);
   const [matchedDog, setMatchedDog] = useState<Dog | null>(null);
+  const [appliedFilterCount, setAppliedFilterCount] = useState(0);
 
   useEffect(() => {
     fetchDogs();
@@ -60,9 +63,13 @@ const MainPage = () => {
   }, [dogs]);
 
   const fetchDogs = async (page?: string) => {
+    setIsLoading(true);
     const dogResponse = await fetchDogsAsync(page);
     if (dogResponse.status === "OK") {
-      setDogs(dogResponse.dogs);
+      // This makes sure that the sorting filter is persisted across every fetch dog API call
+      // since I am not passing sort filter to the API to avoid discrepancies in the list
+      handleSortEvent(filters.sort, dogResponse.dogs);
+      // setDogs(dogResponse.dogs);
       setPagination({
         next: dogResponse.next,
         prev: dogResponse.prev,
@@ -71,7 +78,7 @@ const MainPage = () => {
         containerRef?.current?.scrollIntoView({ behavior: "smooth" });
       }, 1000);
     } else {
-      setError({ show: true, message: dogResponse.message });
+      setError({ show: true, message: dogResponse.message, toRedirect: true });
     }
     setIsLoading(false);
   };
@@ -82,7 +89,11 @@ const MainPage = () => {
     if (breedsResponse.status === "OK") {
       setBreeds(breedsResponse.breeds);
     } else {
-      setError({ show: true, message: breedsResponse.message });
+      setError({
+        show: true,
+        message: breedsResponse.message,
+        toRedirect: true,
+      });
     }
   };
 
@@ -123,12 +134,25 @@ const MainPage = () => {
     }
     const matchResponse = await generateMatchAsync(favorites);
     if (matchResponse.status === "OK") {
-      const match = dogs.filter((dog) => dog.id === matchResponse.match)[0];
-      setMatchedDog(match);
-      setShowMatchFoundModal(true);
-      // alert(matchResponse.match);
+      const match = allDogs.current.filter(
+        (dog) => dog.id === matchResponse.match
+      )[0];
+      if (match) {
+        setMatchedDog(match);
+        setShowMatchFoundModal(true);
+      } else {
+        setError({
+          show: true,
+          message: "Something went wrong. Please try again later",
+          toRedirect: false,
+        });
+      }
     } else {
-      setError({ show: true, message: matchResponse.message });
+      setError({
+        show: true,
+        message: matchResponse.message,
+        toRedirect: true,
+      });
     }
   };
 
@@ -140,46 +164,77 @@ const MainPage = () => {
       if (response.status === "OK") {
         navigate("/login");
       } else {
-        setError({ show: true, message: response.message });
+        setError({ show: true, message: response.message, toRedirect: true });
       }
     }
   };
 
   const handleApplyFiltersClick = () => {
     let params = "?";
+    let count = 0;
     Object.keys(filters).map((key) => {
       if (key === "breeds" && filters.breeds?.length > 0) {
         const breedsString = encodeURIComponent(filters.breeds.join(","));
         params += `${key}=${breedsString}&`;
+        count++;
       } else if (key === "zipCodes" && filters.breeds?.length > 0) {
         const zipCodesString = encodeURIComponent(filters.zipCodes.join(","));
         params += `${key}=${zipCodesString}&`;
+        count++;
       } else if (key === "sort" && filters.sort) {
         // params += `${key}=${filters.sort}&`;
       } else if (key === "ageMax" && filters.ageMax) {
         params += `${key}=${filters.ageMax}&`;
+        count++;
       } else if (key === "ageMin" && filters.ageMin) {
         params += `${key}=${filters.ageMin}&`;
+        count++;
       } else if (key === "size" && filters.size) {
         params += `${key}=${filters.size}&`;
       }
     });
+    setAppliedFilterCount(count);
     setShowFilters(false);
     const url = `/dogs/search${params}`;
     fetchDogs(url);
   };
 
+  const handleResetFiltersClick = () => {
+    setFilters({ ...DEFAULT_FILTERS, sort: filters.sort });
+    setShowFilters(false);
+    setAppliedFilterCount(0);
+    fetchDogs();
+  };
+
+  const handleSortEvent = (sortBy: string, dogList: Array<Dog>) => {
+    const sortedList = sortListBasedOnFilter(sortBy, dogList);
+    allDogs.current = mergeListItemsById(allDogs.current, sortedList);
+    setDogs([...sortedList]);
+    setFilters({ ...filters, sort: sortBy });
+  };
+
   useEffect(() => {
     if (error.show) {
       setTimeout(() => {
-        setError({ show: false, message: "" });
-        navigate("/login");
+        setError({ show: false, message: "", toRedirect: false });
+        if (error.toRedirect) navigate("/login");
       }, 3000);
     }
   }, [error]);
 
+  const getSortByLabel = () => {
+    const option = SORT_BY_OPTIONS.filter(
+      (option) => option.value === filters.sort
+    );
+    if (option && option.length > 0) {
+      return option[0].label;
+    }
+    return "";
+  };
+
   return (
     <Container fluid className="p-0" ref={containerRef}>
+      <PageLoader isLoading={isLoading} />
       <Modal
         size="lg"
         aria-labelledby="contained-modal-title-vcenter"
@@ -189,8 +244,7 @@ const MainPage = () => {
           <CloseButton
             className="float-end"
             onClick={() => {
-              setError({ show: false, message: "" });
-              navigate("/login");
+              setError({ show: false, message: "", toRedirect: true });
             }}
           />
           <Container className="d-flex flex-column align-items-center container">
@@ -253,7 +307,7 @@ const MainPage = () => {
                   id="dropdown-basic"
                   className="secondary-btn"
                 >
-                  {`Sort by`}
+                  {`Sort by: ${getSortByLabel()}`}
                 </Dropdown.Toggle>
                 <Dropdown.Menu className="custom-dropdown-menu">
                   {SORT_BY_OPTIONS.map((option, index) => (
@@ -261,12 +315,7 @@ const MainPage = () => {
                       key={index}
                       href="#"
                       onClick={() => {
-                        const sortedList = sortListBasedOnFilter(
-                          option.value,
-                          dogs
-                        );
-                        setDogs([...sortedList]);
-                        setFilters({ ...filters, sort: option.value });
+                        handleSortEvent(option.value, dogs);
                       }}
                       active={option.value === filters.sort}
                     >
@@ -284,7 +333,9 @@ const MainPage = () => {
                   setShowFilters(!showFilters);
                 }}
               >
-                <span>{`${showFilters ? "Hide" : "Show"} filters`}</span>
+                <span>{`${
+                  showFilters ? "Hide" : "Show"
+                } filters (${appliedFilterCount})`}</span>
               </Button>
             </Container>
           </Container>
@@ -346,9 +397,11 @@ const MainPage = () => {
                     value={filters.ageMin || ""}
                     type="number"
                     placeholder="Minimum age"
-                    onChange={(e: React.ChangeEvent<any>) =>
-                      setFilters({ ...filters, ageMin: e.target.value })
-                    }
+                    onChange={(e: React.ChangeEvent<any>) => {
+                      console.log(e.target.value);
+
+                      setFilters({ ...filters, ageMin: e.target.value });
+                    }}
                   />
                 </Col>
                 <Col>
@@ -372,12 +425,12 @@ const MainPage = () => {
                   Apply filters
                 </Button>
                 <Button
-                  className="apply-filter-button"
+                  className="reset-filter-button"
                   onClick={() => {
-                    handleApplyFiltersClick();
+                    handleResetFiltersClick();
                   }}
                 >
-                  Apply filters
+                  Reset filters
                 </Button>
               </Col>
             </Container>

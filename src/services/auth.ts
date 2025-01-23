@@ -29,7 +29,7 @@ export const login = async ({ name, email }: LoginCredentials) => {
 
 export const logout = async () => {
   try {
-    const response = await axios.post(
+    await axios.post(
       "https://frontend-take-home-service.fetch.com/auth/logout",
       {},
       { withCredentials: true }

@@ -4,7 +4,7 @@ export const sortListBasedOnFilter = (sortBy: string, list: Array<Dog>) => {
   switch (sortBy) {
     case "breed:asc":
       return sortListByBreed(true, list);
-    case "bread:desc":
+    case "breed:desc":
       return sortListByBreed(false, list);
     case "name:asc":
       return sortListByName(true, list);
@@ -15,7 +15,7 @@ export const sortListBasedOnFilter = (sortBy: string, list: Array<Dog>) => {
     case "age:desc":
       return sortListByAge(false, list);
     default:
-      return list
+      return list;
   }
 };
 
@@ -41,4 +41,16 @@ const sortListByAge = (ascending: boolean, list: Array<Dog>) => {
   } else {
     return list.sort((a, b) => b.age - a.age);
   }
+};
+
+export const mergeListItemsById = (list1: Array<Dog>, list2: Array<Dog>) => {
+  const merged = [...list1];
+
+  list2.forEach((dog) => {
+    if (!merged.some((existingDog) => existingDog.id === dog.id)) {
+      merged.push(dog);
+    }
+  });
+
+  return merged;
 };
