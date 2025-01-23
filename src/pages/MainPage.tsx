@@ -26,6 +26,7 @@ import {
 import { logout } from "../services/auth";
 import { useNavigate } from "react-router-dom";
 import { mergeListItemsById, sortListBasedOnFilter } from "../utils/listUtils";
+import PageLoader from "src/components/PageLoader";
 
 const MainPage = () => {
   const navigate = useNavigate();
@@ -49,6 +50,7 @@ const MainPage = () => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [showMatchFoundModal, setShowMatchFoundModal] = useState(false);
   const [matchedDog, setMatchedDog] = useState<Dog | null>(null);
+  const [appliedFilterCount, setAppliedFilterCount] = useState(0);
 
   useEffect(() => {
     fetchDogs();
@@ -61,6 +63,7 @@ const MainPage = () => {
   }, [dogs]);
 
   const fetchDogs = async (page?: string) => {
+    setIsLoading(true);
     const dogResponse = await fetchDogsAsync(page);
     if (dogResponse.status === "OK") {
       // This makes sure that the sorting filter is persisted across every fetch dog API call
@@ -168,23 +171,29 @@ const MainPage = () => {
 
   const handleApplyFiltersClick = () => {
     let params = "?";
+    let count = 0;
     Object.keys(filters).map((key) => {
       if (key === "breeds" && filters.breeds?.length > 0) {
         const breedsString = encodeURIComponent(filters.breeds.join(","));
         params += `${key}=${breedsString}&`;
+        count++;
       } else if (key === "zipCodes" && filters.breeds?.length > 0) {
         const zipCodesString = encodeURIComponent(filters.zipCodes.join(","));
         params += `${key}=${zipCodesString}&`;
+        count++;
       } else if (key === "sort" && filters.sort) {
         // params += `${key}=${filters.sort}&`;
       } else if (key === "ageMax" && filters.ageMax) {
         params += `${key}=${filters.ageMax}&`;
+        count++;
       } else if (key === "ageMin" && filters.ageMin) {
         params += `${key}=${filters.ageMin}&`;
+        count++;
       } else if (key === "size" && filters.size) {
         params += `${key}=${filters.size}&`;
       }
     });
+    setAppliedFilterCount(count);
     setShowFilters(false);
     const url = `/dogs/search${params}`;
     fetchDogs(url);
@@ -192,6 +201,8 @@ const MainPage = () => {
 
   const handleResetFiltersClick = () => {
     setFilters({ ...DEFAULT_FILTERS, sort: filters.sort });
+    setShowFilters(false);
+    setAppliedFilterCount(0);
     fetchDogs();
   };
 
@@ -211,8 +222,19 @@ const MainPage = () => {
     }
   }, [error]);
 
+  const getSortByLabel = () => {
+    const option = SORT_BY_OPTIONS.filter(
+      (option) => option.value === filters.sort
+    );
+    if (option && option.length > 0) {
+      return option[0].label;
+    }
+    return "";
+  };
+
   return (
     <Container fluid className="p-0" ref={containerRef}>
+      <PageLoader isLoading={isLoading} />
       <Modal
         size="lg"
         aria-labelledby="contained-modal-title-vcenter"
@@ -285,7 +307,7 @@ const MainPage = () => {
                   id="dropdown-basic"
                   className="secondary-btn"
                 >
-                  {`Sort by`}
+                  {`Sort by: ${getSortByLabel()}`}
                 </Dropdown.Toggle>
                 <Dropdown.Menu className="custom-dropdown-menu">
                   {SORT_BY_OPTIONS.map((option, index) => (
@@ -311,7 +333,9 @@ const MainPage = () => {
                   setShowFilters(!showFilters);
                 }}
               >
-                <span>{`${showFilters ? "Hide" : "Show"} filters`}</span>
+                <span>{`${
+                  showFilters ? "Hide" : "Show"
+                } filters (${appliedFilterCount})`}</span>
               </Button>
             </Container>
           </Container>
@@ -373,9 +397,11 @@ const MainPage = () => {
                     value={filters.ageMin || ""}
                     type="number"
                     placeholder="Minimum age"
-                    onChange={(e: React.ChangeEvent<any>) =>
-                      setFilters({ ...filters, ageMin: e.target.value })
-                    }
+                    onChange={(e: React.ChangeEvent<any>) => {
+                      console.log(e.target.value);
+
+                      setFilters({ ...filters, ageMin: e.target.value });
+                    }}
                   />
                 </Col>
                 <Col>
