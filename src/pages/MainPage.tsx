@@ -177,7 +177,7 @@ const MainPage = () => {
         const breedsString = encodeURIComponent(filters.breeds.join(","));
         params += `${key}=${breedsString}&`;
         count++;
-      } else if (key === "zipCodes" && filters.breeds?.length > 0) {
+      } else if (key === "zipCodes" && filters.zipCodes?.length > 0) {
         const zipCodesString = encodeURIComponent(filters.zipCodes.join(","));
         params += `${key}=${zipCodesString}&`;
         count++;
@@ -199,18 +199,22 @@ const MainPage = () => {
     fetchDogs(url);
   };
 
-  const handleResetFiltersClick = () => {
+  const handleResetFiltersClick = async () => {
     setFilters({ ...DEFAULT_FILTERS, sort: filters.sort });
     setShowFilters(false);
     setAppliedFilterCount(0);
-    fetchDogs();
+    await fetchDogs();
   };
 
-  const handleSortEvent = (sortBy: string, dogList: Array<Dog>) => {
+  const handleSortEvent = (
+    sortBy: string,
+    dogList: Array<Dog>,
+    updateFilterState: boolean = false
+  ) => {
     const sortedList = sortListBasedOnFilter(sortBy, dogList);
     allDogs.current = mergeListItemsById(allDogs.current, sortedList);
     setDogs([...sortedList]);
-    setFilters({ ...filters, sort: sortBy });
+    if (updateFilterState) setFilters({ ...filters, sort: sortBy });
   };
 
   useEffect(() => {
@@ -259,7 +263,10 @@ const MainPage = () => {
         <Modal.Body>
           <CloseButton
             className="float-end"
-            onClick={() => setShowMatchFoundModal(false)}
+            onClick={() => {
+              setFavorites([])
+              setShowMatchFoundModal(false);
+            }}
           />
           <Container className="d-flex flex-column align-items-center container">
             <h3>We have found a match for you!</h3>
@@ -315,7 +322,7 @@ const MainPage = () => {
                       key={index}
                       href="#"
                       onClick={() => {
-                        handleSortEvent(option.value, dogs);
+                        handleSortEvent(option.value, dogs, true);
                       }}
                       active={option.value === filters.sort}
                     >
