@@ -19,31 +19,32 @@ import {
   fetchDogsAsync,
   generateMatchAsync,
 } from "../services/dogService";
-import { SORT_BY_OPTIONS } from "../constants/DropdownConstants";
+import {
+  DEFAULT_FILTERS,
+  SORT_BY_OPTIONS,
+} from "../constants/DropdownConstants";
 import { logout } from "../services/auth";
 import { useNavigate } from "react-router-dom";
-import { sortListBasedOnFilter } from "../utils/sortUtils";
+import { mergeListItemsById, sortListBasedOnFilter } from "../utils/listUtils";
 
 const MainPage = () => {
   const navigate = useNavigate();
   const [dogs, setDogs] = useState<Array<Dog>>([]);
+  const allDogs = useRef<Array<Dog>>([]);
   const [breeds, setBreeds] = useState<Array<string>>([]);
   const [zipCodes, setZipCodes] = useState<Array<string>>([]);
   const [favorites, setFavorites] = useState<Array<string>>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<any>({ show: false, message: "" });
+  const [error, setError] = useState<any>({
+    show: false,
+    message: "",
+    toRedirect: false,
+  });
   const [pagination, setPagination] = useState<Pagination>({
     prev: "",
     next: "",
   });
-  const [filters, setFilters] = useState<DogFilter>({
-    breeds: [],
-    sort: "breed:asc",
-    zipCodes: [],
-    ageMax: null,
-    ageMin: null,
-    size: 16,
-  });
+  const [filters, setFilters] = useState<DogFilter>(DEFAULT_FILTERS);
   const [showFilters, setShowFilters] = useState<boolean>(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [showMatchFoundModal, setShowMatchFoundModal] = useState(false);
@@ -62,7 +63,10 @@ const MainPage = () => {
   const fetchDogs = async (page?: string) => {
     const dogResponse = await fetchDogsAsync(page);
     if (dogResponse.status === "OK") {
-      setDogs(dogResponse.dogs);
+      // This makes sure that the sorting filter is persisted across every fetch dog API call
+      // since I am not passing sort filter to the API to avoid discrepancies in the list
+      handleSortEvent(filters.sort, dogResponse.dogs);
+      // setDogs(dogResponse.dogs);
       setPagination({
         next: dogResponse.next,
         prev: dogResponse.prev,
@@ -71,7 +75,7 @@ const MainPage = () => {
         containerRef?.current?.scrollIntoView({ behavior: "smooth" });
       }, 1000);
     } else {
-      setError({ show: true, message: dogResponse.message });
+      setError({ show: true, message: dogResponse.message, toRedirect: true });
     }
     setIsLoading(false);
   };
@@ -82,7 +86,11 @@ const MainPage = () => {
     if (breedsResponse.status === "OK") {
       setBreeds(breedsResponse.breeds);
     } else {
-      setError({ show: true, message: breedsResponse.message });
+      setError({
+        show: true,
+        message: breedsResponse.message,
+        toRedirect: true,
+      });
     }
   };
 
@@ -123,12 +131,25 @@ const MainPage = () => {
     }
     const matchResponse = await generateMatchAsync(favorites);
     if (matchResponse.status === "OK") {
-      const match = dogs.filter((dog) => dog.id === matchResponse.match)[0];
-      setMatchedDog(match);
-      setShowMatchFoundModal(true);
-      // alert(matchResponse.match);
+      const match = allDogs.current.filter(
+        (dog) => dog.id === matchResponse.match
+      )[0];
+      if (match) {
+        setMatchedDog(match);
+        setShowMatchFoundModal(true);
+      } else {
+        setError({
+          show: true,
+          message: "Something went wrong. Please try again later",
+          toRedirect: false,
+        });
+      }
     } else {
-      setError({ show: true, message: matchResponse.message });
+      setError({
+        show: true,
+        message: matchResponse.message,
+        toRedirect: true,
+      });
     }
   };
 
@@ -140,7 +161,7 @@ const MainPage = () => {
       if (response.status === "OK") {
         navigate("/login");
       } else {
-        setError({ show: true, message: response.message });
+        setError({ show: true, message: response.message, toRedirect: true });
       }
     }
   };
@@ -169,11 +190,23 @@ const MainPage = () => {
     fetchDogs(url);
   };
 
+  const handleResetFiltersClick = () => {
+    setFilters({ ...DEFAULT_FILTERS, sort: filters.sort });
+    fetchDogs();
+  };
+
+  const handleSortEvent = (sortBy: string, dogList: Array<Dog>) => {
+    const sortedList = sortListBasedOnFilter(sortBy, dogList);
+    allDogs.current = mergeListItemsById(allDogs.current, sortedList);
+    setDogs([...sortedList]);
+    setFilters({ ...filters, sort: sortBy });
+  };
+
   useEffect(() => {
     if (error.show) {
       setTimeout(() => {
-        setError({ show: false, message: "" });
-        navigate("/login");
+        setError({ show: false, message: "", toRedirect: false });
+        if (error.toRedirect) navigate("/login");
       }, 3000);
     }
   }, [error]);
@@ -189,8 +222,7 @@ const MainPage = () => {
           <CloseButton
             className="float-end"
             onClick={() => {
-              setError({ show: false, message: "" });
-              navigate("/login");
+              setError({ show: false, message: "", toRedirect: true });
             }}
           />
           <Container className="d-flex flex-column align-items-center container">
@@ -261,12 +293,7 @@ const MainPage = () => {
                       key={index}
                       href="#"
                       onClick={() => {
-                        const sortedList = sortListBasedOnFilter(
-                          option.value,
-                          dogs
-                        );
-                        setDogs([...sortedList]);
-                        setFilters({ ...filters, sort: option.value });
+                        handleSortEvent(option.value, dogs);
                       }}
                       active={option.value === filters.sort}
                     >
@@ -372,12 +399,12 @@ const MainPage = () => {
                   Apply filters
                 </Button>
                 <Button
-                  className="apply-filter-button"
+                  className="reset-filter-button"
                   onClick={() => {
-                    handleApplyFiltersClick();
+                    handleResetFiltersClick();
                   }}
                 >
-                  Apply filters
+                  Reset filters
                 </Button>
               </Col>
             </Container>

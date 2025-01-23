@@ -6,3 +6,12 @@ export const SORT_BY_OPTIONS = [
   { label: "Age: Ascending", value: "age:asc" },
   { label: "Age: Descending", value: "age:desc" },
 ];
+
+export const DEFAULT_FILTERS = {
+  breeds: [],
+  sort: "breed:asc",
+  zipCodes: [],
+  ageMax: null,
+  ageMin: null,
+  size: 25,
+};

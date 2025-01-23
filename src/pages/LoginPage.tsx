@@ -38,6 +38,8 @@ const LoginPage = () => {
         }
         setIsLoading(false);
       }, 1500);
+    } else {
+      setIsLoading(false);
     }
   };
 
